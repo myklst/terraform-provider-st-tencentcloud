@@ -203,7 +203,7 @@ func (p *tencentCloudProvider) Configure(ctx context.Context, req provider.Confi
 
 func (p *tencentCloudProvider) DataSources(_ context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
-		NewClbLoadBalancerDataSource,
+		NewClbLoadBalancersDataSource,
 	}
 }
 

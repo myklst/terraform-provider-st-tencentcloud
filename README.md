@@ -8,7 +8,7 @@ Supported Versions
 
 | Terraform version | minimum provider version |maxmimum provider version
 | ---- | ---- | ----|
-| >= 1.3.x	| 0.1.1	| latest |
+| >= 1.3.x	| 0.1.0	| latest |
 
 Requirements
 ------------
@@ -48,26 +48,15 @@ scenario. The reason behind every resources and data sources are stated as below
 
 ### Data Sources
 
-- **st-tencentcloud_cloud_load_balancers**
+- **st-tencentcloud_clb_load_balancers**
 
-  The tags parameter of Tencent Cloud API
-  [*DescribeLoadBalancers*](https://www.tencentcloud.com/document/product/214/1261)
-  will return all load balancers when any one of the tags are matched. This may
-  be a problem when the user wants to match exactly all given tags, therefore
-  this data source will filter once more after listing the load balancers
-  from Tencent Cloud API to match all the given tags.
-
-  The example bahaviors of Tencent Cloud API *DescribeLoadBalancers*:
-
-  | Load Balancer   | Tags                                            | Given tags: { "location": "office" "env": "test" }          |
-  |-----------------|-------------------------------------------------|-------------------------------------------------------------|
-  | load-balancer-A | { "location": "office" "env" : "test" }         | Matched (work as expected)                                  |
-  | load-balancer-B | { "location": "office" "env" : "prod" }         | Matched (should not be matched as the `env` is prod)          |
+  The official TencentCloud Terraform provider's data source
+  [*tencentcloud_clb_instances*](https://registry.terraform.io/providers/tencentcloudstack/tencentcloud/latest/docs/data-sources/clb_instances)
+  do not support filtering load balancers with tags.
 
 References
 ----------
 
 - Website: https://www.terraform.io
+- Terraform Plugin Framework: https://developer.hashicorp.com/terraform/tutorials/providers-plugin-framework
 - Tencent Cloud official Terraform provider: https://github.com/tencentcloudstack/terraform-provider-tencentcloud
-
-- https://developer.hashicorp.com/terraform/tutorials/providers-plugin-framework

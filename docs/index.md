@@ -16,7 +16,7 @@ The Tencent Cloud provider is used to interact with the many resources supported
 terraform {
   required_providers {
     st-tencentcloud = {
-      source = "example.local/myklst/st-tencentcloud"
+      source = "myklst/st-tencentcloud"
     }
   }
 }

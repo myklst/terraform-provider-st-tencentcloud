@@ -1,7 +1,7 @@
 terraform {
   required_providers {
     st-tencentcloud = {
-      source = "example.local/myklst/st-tencentcloud"
+      source = "myklst/st-tencentcloud"
     }
   }
 }
