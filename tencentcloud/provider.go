@@ -174,14 +174,14 @@ func (p *tencentCloudProvider) Configure(ctx context.Context, req provider.Confi
 	}
 
 	clientCredentialsConfig := common.NewCredential(
-		os.Getenv("TENCENTCLOUD_SECRET_ID"),
-		os.Getenv("TENCENTCLOUD_SECRET_KEY"),
+		secretId,
+		secretKey,
 	)
 
 	// Tencent Cloud Load Balancers Client
 	// HongKong = "ap-hongkong"
 	// https://github.com/TencentCloud/tencentcloud-sdk-go/blob/master/tencentcloud/common/regions/regions.go
-	clbClient, err := tencentCloudClbClient.NewClient(clientCredentialsConfig, os.Getenv("TENCENTCLOUD_REGION"), profile.NewClientProfile())
+	clbClient, err := tencentCloudClbClient.NewClient(clientCredentialsConfig, region, profile.NewClientProfile())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Create Tencent Cloud Load Balancers API Client",
@@ -203,7 +203,7 @@ func (p *tencentCloudProvider) Configure(ctx context.Context, req provider.Confi
 
 func (p *tencentCloudProvider) DataSources(_ context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
-		NewClbDataSource,
+		NewClbLoadBalancerDataSource,
 	}
 }
 

@@ -22,7 +22,7 @@ var (
 	_ datasource.DataSourceWithConfigure = &clbLoadBalancersDataSource{}
 )
 
-func NewClbDataSource() datasource.DataSource {
+func NewClbLoadBalancerDataSource() datasource.DataSource {
 	return &clbLoadBalancersDataSource{}
 }
 
