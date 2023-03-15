@@ -10,9 +10,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	tencentCloudClbClient "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/clb/v20180317"
+
 	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common"
 	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/errors"
+
+	tencentCloudClbClient "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/clb/v20180317"
 )
 
 var (
@@ -42,7 +44,7 @@ type clbLoadBalancersDetail struct {
 }
 
 func (d *clbLoadBalancersDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_cloud_load_balancers"
+	resp.TypeName = req.ProviderTypeName + "_clb_load_balancers"
 }
 
 func (d *clbLoadBalancersDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
@@ -50,33 +52,33 @@ func (d *clbLoadBalancersDataSource) Schema(ctx context.Context, req datasource.
 		Description: "This data source provides the Cloud Load Balancers of the current Tencent Cloud user.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "",
+				Description: "ID of Cloud Load Balancers to query",
 				Optional:    true,
 			},
 			"name": schema.StringAttribute{
-				Description: "",
+				Description: "Name of Cloud Load Balancers to query",
 				Optional:    true,
 			},
 			"tags": schema.MapAttribute{
-				Description: "",
+				Description: "Tags of Cloud Load Balancers to query",
 				ElementType: types.StringType,
 				Optional:    true,
 			},
 			"load_balancers": schema.ListNestedAttribute{
-				Description: "",
+				Description: "Result list of Cloud Load Balancers queried",
 				Computed:    true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"id": schema.StringAttribute{
-							Description: "",
+							Description: "The ID of the Cloud Load Balancer",
 							Computed:    true,
 						},
 						"name": schema.StringAttribute{
-							Description: "",
+							Description: "The Name of the Cloud Load Balancer",
 							Computed:    true,
 						},
 						"tags": schema.MapAttribute{
-							Description: "",
+							Description: "The Tags of the Cloud Load Balancer",
 							ElementType: types.StringType,
 							Computed:    true,
 						},
@@ -91,7 +93,6 @@ func (d *clbLoadBalancersDataSource) Configure(ctx context.Context, req datasour
 	if req.ProviderData == nil {
 		return
 	}
-
 	d.client = req.ProviderData.(tencentCloudClients).clbClient
 }
 
@@ -104,23 +105,43 @@ func (d *clbLoadBalancersDataSource) Read(ctx context.Context, req datasource.Re
 	}
 
 	state := &clbLoadBalancersDataSourceModel{}
-
+	state.LoadBalancers = []*clbLoadBalancersDetail{}
 	state.Id = plan.Id
 	state.Name = plan.Name
 	state.Tags = plan.Tags
-	state.LoadBalancers = []*clbLoadBalancersDetail{}
 
 	// Create Describe Load Balancers Request
 	describeLoadBalancersRequest := tencentCloudClbClient.NewDescribeLoadBalancersRequest()
 
 	if !(plan.Name.IsUnknown() || plan.Name.IsNull()) {
-		state.Name = plan.Name
 		describeLoadBalancersRequest.LoadBalancerName = common.StringPtr(plan.Name.ValueString())
 	}
 
 	if !(plan.Id.IsUnknown() || plan.Id.IsNull()) {
-		state.Id = plan.Id
 		describeLoadBalancersRequest.LoadBalancerIds = []*string{common.StringPtr(state.Id.ValueString())}
+	}
+
+	if !(plan.Tags.IsUnknown() || plan.Tags.IsNull()) {
+		inputTags := make(map[string]string)
+
+		// Convert from Terraform map type to Go map type
+		convertTagsDiags := plan.Tags.ElementsAs(ctx, &inputTags, false)
+		resp.Diagnostics.Append(convertTagsDiags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+
+		// Get all filter tags from Plan and convert them into Tencent Cloud Filter type
+		filterList := []*tencentCloudClbClient.Filter{}
+		for inputKey, inputValue := range inputTags {
+			filterDetail := &tencentCloudClbClient.Filter{
+				Name:   common.StringPtr("tag:" + inputKey),
+				Values: common.StringPtrs([]string{inputValue}),
+			}
+			filterList = append(filterList, filterDetail)
+		}
+
+		describeLoadBalancersRequest.Filters = filterList
 	}
 
 	describeLb := func() error {
@@ -138,50 +159,32 @@ func (d *clbLoadBalancersDataSource) Read(ctx context.Context, req datasource.Re
 			}
 		}
 
-		// Read all Load Balancers
-		for _, detail := range describeLoadBalancersResponse.Response.LoadBalancerSet {
-			if len(detail.Tags) < 1 {
+		// Store Load Balancers into Terraform state
+		for _, lbSet := range describeLoadBalancersResponse.Response.LoadBalancerSet {
+			if len(lbSet.Tags) < 1 {
 				clbDetail := &clbLoadBalancersDetail{
-					Id:   types.StringValue(*detail.LoadBalancerId),
-					Name: types.StringValue(*detail.LoadBalancerName),
+					Id:   types.StringValue(*lbSet.LoadBalancerId),
+					Name: types.StringValue(*lbSet.LoadBalancerName),
 					Tags: types.MapNull(types.StringType),
 				}
 				state.LoadBalancers = append(state.LoadBalancers, clbDetail)
 				continue
 			} else {
-
-				// Initialize Tag Map
+				// Convert API output Tags to Go map
 				clbTagMap := make(map[string]attr.Value)
-				count := len(detail.Tags)
+				count := len(lbSet.Tags)
 				for i := 0; i < count; i++ {
-					clbTagMap[*detail.Tags[i].TagKey] = types.StringValue(*detail.Tags[i].TagValue)
+					clbTagMap[*lbSet.Tags[i].TagKey] = types.StringValue(*lbSet.Tags[i].TagValue)
 				}
 
-				// Determines whether Cloud Load Balancer is read
-				clbOutput := true
-
-				if !(plan.Tags.IsUnknown() || plan.Tags.IsNull()) {
-					goInputMap := state.Tags.Elements()
-					for inputKey, inputValue := range goInputMap {
-						value, ok := clbTagMap[inputKey]
-						if !ok || value != inputValue {
-							clbOutput = false
-							break
-						}
-					}
+				clbDetail := &clbLoadBalancersDetail{
+					Id:   types.StringValue(*lbSet.LoadBalancerId),
+					Name: types.StringValue(*lbSet.LoadBalancerName),
+					Tags: types.MapValueMust(types.StringType, clbTagMap),
 				}
-
-				if clbOutput {
-					clbDetail := &clbLoadBalancersDetail{
-						Id:   types.StringValue(*detail.LoadBalancerId),
-						Name: types.StringValue(*detail.LoadBalancerName),
-						Tags: types.MapValueMust(types.StringType, clbTagMap),
-					}
-					state.LoadBalancers = append(state.LoadBalancers, clbDetail)
-				}
+				state.LoadBalancers = append(state.LoadBalancers, clbDetail)
 			}
 		}
-
 		return nil
 	}
 

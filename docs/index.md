@@ -31,6 +31,6 @@ provider "st-tencentcloud" {
 
 ### Optional
 
-- `region` (String) Region for Tencent Cloud API. May also be provided via TENCENT_CLOUD_REGION environment variable.
-- `secret_id` (String) Access Key for Tencent Cloud API. May also be provided via TENCENT_CLOUD_SECRET_ID environment variable
-- `secret_key` (String, Sensitive) Secret key for Tencent Cloud API. May also be provided via TENCENT_CLOUD_SECRET_KEY environment variable
+- `region` (String) Region for Tencent Cloud API. May also be provided via TENCENTCLOUD_REGION environment variable.
+- `secret_id` (String) Access Key for Tencent Cloud API. May also be provided via TENCENTCLOUD_SECRET_ID environment variable
+- `secret_key` (String, Sensitive) Secret key for Tencent Cloud API. May also be provided via TENCENTCLOUD_SECRET_KEY environment variable

@@ -12,14 +12,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common"
-    "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/profile"
+	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/profile"
 
 	tencentCloudClbClient "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/clb/v20180317"
 )
 
 // Wrapper of Tencent Cloud client
 type tencentCloudClients struct {
-	clbClient     *tencentCloudClbClient.Client
+	clbClient *tencentCloudClbClient.Client
 }
 
 // Ensure the implementation satisfies the expected interfaces
@@ -36,7 +36,7 @@ type tencentCloudProvider struct{}
 
 type tencentCloudProviderModel struct {
 	Region    types.String `tfsdk:"region"`
-	SecretId types.String `tfsdk:"secret_id"`
+	SecretId  types.String `tfsdk:"secret_id"`
 	SecretKey types.String `tfsdk:"secret_key"`
 }
 
@@ -52,15 +52,15 @@ func (p *tencentCloudProvider) Schema(_ context.Context, _ provider.SchemaReques
 			"The provider needs to be configured with the proper credentials before it can be used.",
 		Attributes: map[string]schema.Attribute{
 			"region": schema.StringAttribute{
-				Description: "Region for Tencent Cloud API. May also be provided via TENCENT_CLOUD_REGION environment variable.",
+				Description: "Region for Tencent Cloud API. May also be provided via TENCENTCLOUD_REGION environment variable.",
 				Optional:    true,
 			},
 			"secret_id": schema.StringAttribute{
-				Description: "Access Key for Tencent Cloud API. May also be provided via TENCENT_CLOUD_SECRET_ID environment variable",
+				Description: "Access Key for Tencent Cloud API. May also be provided via TENCENTCLOUD_SECRET_ID environment variable",
 				Optional:    true,
 			},
 			"secret_key": schema.StringAttribute{
-				Description: "Secret key for Tencent Cloud API. May also be provided via TENCENT_CLOUD_SECRET_KEY environment variable",
+				Description: "Secret key for Tencent Cloud API. May also be provided via TENCENTCLOUD_SECRET_KEY environment variable",
 				Optional:    true,
 				Sensitive:   true,
 			},
@@ -84,7 +84,7 @@ func (p *tencentCloudProvider) Configure(ctx context.Context, req provider.Confi
 			path.Root("region"),
 			"Unknown Tencent Cloud region",
 			"The provider cannot create the Tencent Cloud API client as there is an unknown configuration value for the"+
-				"Tencent Cloud API region. Set the value statically in the configuration, or use the TENCENT_CLOUD_REGION environment variable.",
+				"Tencent Cloud API region. Set the value statically in the configuration, or use the TENCENTCLOUD_REGION environment variable.",
 		)
 	}
 
@@ -93,7 +93,7 @@ func (p *tencentCloudProvider) Configure(ctx context.Context, req provider.Confi
 			path.Root("secret_id"),
 			"Unknown Tencent Cloud access key",
 			"The provider cannot create the Tencent Cloud API client as there is an unknown configuration value for the"+
-				"Tencent Cloud API access key. Set the value statically in the configuration, or use the TENCENT_CLOUD_SECRET_ID environment variable.",
+				"Tencent Cloud API access key. Set the value statically in the configuration, or use the TENCENTCLOUD_SECRET_ID environment variable.",
 		)
 	}
 
@@ -102,7 +102,7 @@ func (p *tencentCloudProvider) Configure(ctx context.Context, req provider.Confi
 			path.Root("secret_key"),
 			"Unknown Tencent Cloud secret key",
 			"The provider cannot create the Tencent Cloud API client as there is an unknown configuration value for the"+
-				"Tencent Cloud secret key. Set the value statically in the configuration, or use the TENCENT_CLOUD_SECRET_KEY environment variable.",
+				"Tencent Cloud secret key. Set the value statically in the configuration, or use the TENCENTCLOUD_SECRET_KEY environment variable.",
 		)
 	}
 
@@ -116,19 +116,19 @@ func (p *tencentCloudProvider) Configure(ctx context.Context, req provider.Confi
 	if !config.Region.IsNull() {
 		region = config.Region.ValueString()
 	} else {
-		region = os.Getenv("TENCENT_CLOUD_REGION")
+		region = os.Getenv("TENCENTCLOUD_REGION")
 	}
 
 	if !config.SecretId.IsNull() {
 		secretId = config.SecretId.ValueString()
 	} else {
-		secretId = os.Getenv("TENCENT_CLOUD_SECRET_ID")
+		secretId = os.Getenv("TENCENTCLOUD_SECRET_ID")
 	}
 
 	if !config.SecretKey.IsNull() {
 		secretKey = config.SecretKey.ValueString()
 	} else {
-		secretKey = os.Getenv("TENCENT_CLOUD_SECRET_KEY")
+		secretKey = os.Getenv("TENCENTCLOUD_SECRET_KEY")
 	}
 
 	// If any of the expected configuration are missing, return
@@ -139,7 +139,7 @@ func (p *tencentCloudProvider) Configure(ctx context.Context, req provider.Confi
 			"Missing Tencent Cloud API region",
 			"The provider cannot create the Tencent Cloud API client as there is a "+
 				"missing or empty value for the Tencent Cloud API region. Set the "+
-				"region value in the configuration or use the TENCENT_CLOUD_REGION "+
+				"region value in the configuration or use the TENCENTCLOUD_REGION "+
 				"environment variable. If either is already set, ensure the value "+
 				"is not empty.",
 		)
@@ -151,7 +151,7 @@ func (p *tencentCloudProvider) Configure(ctx context.Context, req provider.Confi
 			"Missing Tencent Cloud API access key",
 			"The provider cannot create the Tencent Cloud API client as there is a "+
 				"missing or empty value for the Tencent Cloud API access key. Set the "+
-				"access key value in the configuration or use the TENCENT_CLOUD_SECRET_ID "+
+				"access key value in the configuration or use the TENCENTCLOUD_SECRET_ID "+
 				"environment variable. If either is already set, ensure the value "+
 				"is not empty.",
 		)
@@ -163,7 +163,7 @@ func (p *tencentCloudProvider) Configure(ctx context.Context, req provider.Confi
 			"Missing Tencent Cloud secret key",
 			"The provider cannot create the Tencent Cloud API client as there is a "+
 				"missing or empty value for the Tencent Cloud API Secret Key. Set the "+
-				"secret key value in the configuration or use the TENCENT_CLOUD_SECRET_KEY "+
+				"secret key value in the configuration or use the TENCENTCLOUD_SECRET_KEY "+
 				"environment variable. If either is already set, ensure the value "+
 				"is not empty.",
 		)
@@ -174,14 +174,14 @@ func (p *tencentCloudProvider) Configure(ctx context.Context, req provider.Confi
 	}
 
 	clientCredentialsConfig := common.NewCredential(
-		os.Getenv("TENCENT_CLOUD_SECRET_ID"),
-        os.Getenv("TENCENT_CLOUD_SECRET_KEY"),
+		os.Getenv("TENCENTCLOUD_SECRET_ID"),
+		os.Getenv("TENCENTCLOUD_SECRET_KEY"),
 	)
 
 	// Tencent Cloud Load Balancers Client
 	// HongKong = "ap-hongkong"
 	// https://github.com/TencentCloud/tencentcloud-sdk-go/blob/master/tencentcloud/common/regions/regions.go
-	clbClient, err := tencentCloudClbClient.NewClient(clientCredentialsConfig, os.Getenv("TENCENT_CLOUD_REGION"), profile.NewClientProfile())
+	clbClient, err := tencentCloudClbClient.NewClient(clientCredentialsConfig, os.Getenv("TENCENTCLOUD_REGION"), profile.NewClientProfile())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Create Tencent Cloud Load Balancers API Client",
@@ -194,7 +194,7 @@ func (p *tencentCloudProvider) Configure(ctx context.Context, req provider.Confi
 
 	// Tencent Cloud clients wrapper
 	tencentCloudClients := tencentCloudClients{
-		clbClient:     clbClient,
+		clbClient: clbClient,
 	}
 
 	resp.DataSourceData = tencentCloudClients
