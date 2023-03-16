@@ -1,4 +1,4 @@
-data "st-tencentcloud_clb_load_balancers" "clbs" {
+data "st-tencentcloud_clb_instances" "clbs" {
   tags = {
     "app" = "crond"
     "env" = "test"

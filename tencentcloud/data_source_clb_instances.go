@@ -18,19 +18,19 @@ import (
 )
 
 var (
-	_ datasource.DataSource              = &clbLoadBalancersDataSource{}
-	_ datasource.DataSourceWithConfigure = &clbLoadBalancersDataSource{}
+	_ datasource.DataSource              = &clbInstancesDataSource{}
+	_ datasource.DataSourceWithConfigure = &clbInstancesDataSource{}
 )
 
-func NewClbLoadBalancersDataSource() datasource.DataSource {
-	return &clbLoadBalancersDataSource{}
+func NewClbInstancesDataSource() datasource.DataSource {
+	return &clbInstancesDataSource{}
 }
 
-type clbLoadBalancersDataSource struct {
+type clbInstancesDataSource struct {
 	client *tencentCloudClbClient.Client
 }
 
-type clbLoadBalancersDataSourceModel struct {
+type clbInstancesDataSourceModel struct {
 	Id            types.String              `tfsdk:"id"`
 	Name          types.String              `tfsdk:"name"`
 	Tags          types.Map                 `tfsdk:"tags"`
@@ -43,11 +43,11 @@ type clbLoadBalancersDetail struct {
 	Tags types.Map    `tfsdk:"tags"`
 }
 
-func (d *clbLoadBalancersDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_clb_load_balancers"
+func (d *clbInstancesDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_clb_instances"
 }
 
-func (d *clbLoadBalancersDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func (d *clbInstancesDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description: "This data source provides the Cloud Load Balancers of the current Tencent Cloud user.",
 		Attributes: map[string]schema.Attribute{
@@ -89,22 +89,22 @@ func (d *clbLoadBalancersDataSource) Schema(ctx context.Context, req datasource.
 	}
 }
 
-func (d *clbLoadBalancersDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+func (d *clbInstancesDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
 	}
 	d.client = req.ProviderData.(tencentCloudClients).clbClient
 }
 
-func (d *clbLoadBalancersDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var plan *clbLoadBalancersDataSourceModel
+func (d *clbInstancesDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+	var plan *clbInstancesDataSourceModel
 	getPlanDiags := req.Config.Get(ctx, &plan)
 	resp.Diagnostics.Append(getPlanDiags...)
 	if getPlanDiags.HasError() {
 		return
 	}
 
-	state := &clbLoadBalancersDataSourceModel{}
+	state := &clbInstancesDataSourceModel{}
 	state.LoadBalancers = []*clbLoadBalancersDetail{}
 	state.Id = plan.Id
 	state.Name = plan.Name

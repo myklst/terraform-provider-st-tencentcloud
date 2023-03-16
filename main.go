@@ -9,12 +9,12 @@ import (
 )
 
 // Provider documentation generation.
-//go:generate go run github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs generate --provider-name st-alicloud
+//go:generate go run github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs generate --provider-name st-tencentcloud
 
 func main() {
 	providerAddress := os.Getenv("PROVIDER_LOCAL_PATH")
 	if providerAddress == "" {
-		providerAddress = "registry.terraform.io/myklst/st-tencentcloud"
+		providerAddress = "registry.terraform.io/ruokei/st-tencentcloud"
 	}
 	providerserver.Serve(context.Background(), tencentcloud.New, providerserver.ServeOpts{
 		Address: providerAddress,
