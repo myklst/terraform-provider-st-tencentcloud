@@ -46,6 +46,13 @@ scenario. The reason behind every resources and data sources are stated as below
 
 ### Resources
 
+- **st-tencentcloud_cam_user_group_attachment**
+  
+  The original reason to write this resource is Official TencentCloud Terraform 
+  provider will remove all attached group of a user when destroying the resource. 
+  Therefore, we have developed this custom provider to avoid all attached group 
+  of a user to be destroyed at the same time but only destroyed selected groups.
+
 ### Data Sources
 
 - **st-tencentcloud_clb_load_balancers**
