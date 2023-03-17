@@ -14,7 +14,7 @@ import (
 func main() {
 	providerAddress := os.Getenv("PROVIDER_LOCAL_PATH")
 	if providerAddress == "" {
-		providerAddress = "registry.terraform.io/WongXiaoTong/st-tencentcloud"
+		providerAddress = "registry.terraform.io/myklst/st-tencentcloud"
 	}
 	providerserver.Serve(context.Background(), tencentcloud.New, providerserver.ServeOpts{
 		Address: providerAddress,
