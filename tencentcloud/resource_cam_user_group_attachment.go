@@ -15,28 +15,28 @@ import (
 )
 
 var (
-	_ resource.Resource              = &camGroupMembershipResource{}
-	_ resource.ResourceWithConfigure = &camGroupMembershipResource{}
+	_ resource.Resource              = &camUserGroupAttachmentResource{}
+	_ resource.ResourceWithConfigure = &camUserGroupAttachmentResource{}
 )
 
-func NewCamGroupMembershipResource() resource.Resource {
-	return &camGroupMembershipResource{}
+func NewCamUserGroupAttachmentResource() resource.Resource {
+	return &camUserGroupAttachmentResource{}
 }
 
-type camGroupMembershipResource struct {
+type camUserGroupAttachmentResource struct {
 	client *tencentCloudCamClient.Client
 }
 
-type camGroupMembershipResourceModel struct {
+type camUserGroupAttachmentResourceModel struct {
 	GroupID types.Int64 `tfsdk:"group_id"`
 	UserID  types.Int64 `tfsdk:"user_id"`
 }
 
-func (r *camGroupMembershipResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_cam_group_membership"
+func (r *camUserGroupAttachmentResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_cam_user_group_attachment"
 }
 
-func (r *camGroupMembershipResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *camUserGroupAttachmentResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description: "Provides a TencentCloud CAM Group Membership resource.",
 		Attributes: map[string]schema.Attribute{
@@ -52,15 +52,15 @@ func (r *camGroupMembershipResource) Schema(_ context.Context, _ resource.Schema
 	}
 }
 
-func (r *camGroupMembershipResource) Configure(_ context.Context, req resource.ConfigureRequest, _ *resource.ConfigureResponse) {
+func (r *camUserGroupAttachmentResource) Configure(_ context.Context, req resource.ConfigureRequest, _ *resource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
 	}
 	r.client = req.ProviderData.(tencentCloudClients).camClient
 }
 
-func (r *camGroupMembershipResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var plan *camGroupMembershipResourceModel
+func (r *camUserGroupAttachmentResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	var plan *camUserGroupAttachmentResourceModel
 	getPlanDiags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(getPlanDiags...)
 	if resp.Diagnostics.HasError() {
@@ -76,7 +76,7 @@ func (r *camGroupMembershipResource) Create(ctx context.Context, req resource.Cr
 		return
 	}
 
-	state := &camGroupMembershipResourceModel{}
+	state := &camUserGroupAttachmentResourceModel{}
 	state.GroupID = plan.GroupID
 	state.UserID = plan.UserID
 
@@ -87,8 +87,8 @@ func (r *camGroupMembershipResource) Create(ctx context.Context, req resource.Cr
 	}
 }
 
-func (r *camGroupMembershipResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var state *camGroupMembershipResourceModel
+func (r *camUserGroupAttachmentResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+	var state *camUserGroupAttachmentResourceModel
 	getStateDiags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(getStateDiags...)
 	if resp.Diagnostics.HasError() {
@@ -142,8 +142,8 @@ func (r *camGroupMembershipResource) Read(ctx context.Context, req resource.Read
 	}
 }
 
-func (r *camGroupMembershipResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var plan *camGroupMembershipResourceModel
+func (r *camUserGroupAttachmentResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var plan *camUserGroupAttachmentResourceModel
 	getPlanDiags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(getPlanDiags...)
 	if resp.Diagnostics.HasError() {
@@ -159,7 +159,7 @@ func (r *camGroupMembershipResource) Update(ctx context.Context, req resource.Up
 		return
 	}
 
-	state := &camGroupMembershipResourceModel{}
+	state := &camUserGroupAttachmentResourceModel{}
 	state.GroupID = plan.GroupID
 	state.UserID = plan.UserID
 
@@ -170,8 +170,8 @@ func (r *camGroupMembershipResource) Update(ctx context.Context, req resource.Up
 	}
 }
 
-func (r *camGroupMembershipResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var state *camGroupMembershipResourceModel
+func (r *camUserGroupAttachmentResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	var state *camUserGroupAttachmentResourceModel
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -195,7 +195,7 @@ func (r *camGroupMembershipResource) Delete(ctx context.Context, req resource.De
 	}
 }
 
-func (r *camGroupMembershipResource) addUserToGroup(plan *camGroupMembershipResourceModel) error {
+func (r *camUserGroupAttachmentResource) addUserToGroup(plan *camUserGroupAttachmentResourceModel) (err error) {
 	addUserToGroupRequest := tencentCloudCamClient.NewAddUserToGroupRequest()
 	addUserToGroupRequest.Info = []*tencentCloudCamClient.GroupIdOfUidInfo{
 		{
@@ -222,9 +222,5 @@ func (r *camGroupMembershipResource) addUserToGroup(plan *camGroupMembershipReso
 
 	reconnectBackoff := backoff.NewExponentialBackOff()
 	reconnectBackoff.MaxElapsedTime = 30 * time.Second
-	err := backoff.Retry(addUserToGroup, reconnectBackoff)
-	if err != nil {
-		return err
-	}
-	return nil
+	return backoff.Retry(addUserToGroup, reconnectBackoff)
 }

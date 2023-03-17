@@ -218,12 +218,11 @@ func (p *tencentCloudProvider) Configure(ctx context.Context, req provider.Confi
 func (p *tencentCloudProvider) DataSources(_ context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
 		NewClbInstancesDataSource,
-		//NewCamUserDataSource,
 	}
 }
 
 func (p *tencentCloudProvider) Resources(_ context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
-		NewCamGroupMembershipResource,
+		NewCamUserGroupAttachmentResource,
 	}
 }
