@@ -67,13 +67,11 @@ func (r *camUserGroupAttachmentResource) Create(ctx context.Context, req resourc
 		return
 	}
 
-	err := r.addUserToGroup(plan)
-	if err != nil {
+	if err := r.addUserToGroup(plan); err != nil {
 		resp.Diagnostics.AddError(
 			"[API ERROR] Failed to Add User to Group.",
 			err.Error(),
 		)
-		return
 	}
 
 	state := &camUserGroupAttachmentResourceModel{}
@@ -150,13 +148,11 @@ func (r *camUserGroupAttachmentResource) Update(ctx context.Context, req resourc
 		return
 	}
 
-	err := r.addUserToGroup(plan)
-	if err != nil {
+	if err := r.addUserToGroup(plan); err != nil {
 		resp.Diagnostics.AddError(
 			"[API ERROR] Failed to Add User to Group.",
 			err.Error(),
 		)
-		return
 	}
 
 	state := &camUserGroupAttachmentResourceModel{}
