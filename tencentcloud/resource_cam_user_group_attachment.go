@@ -184,12 +184,12 @@ func (r *camUserGroupAttachmentResource) Delete(ctx context.Context, req resourc
 		},
 	}
 
-	_, err := r.client.RemoveUserFromGroup(removeUserFromGroupRequest)
-	if err != nil {
+	if _, err := r.client.RemoveUserFromGroup(removeUserFromGroupRequest); err != nil {
 		resp.Diagnostics.AddError(
 			"[API ERROR] Failed to Remove User from Group",
 			err.Error(),
 		)
+		return
 	}
 }
 
@@ -203,8 +203,7 @@ func (r *camUserGroupAttachmentResource) addUserToGroup(plan *camUserGroupAttach
 	}
 
 	addUserToGroup := func() error {
-		_, err := r.client.AddUserToGroup(addUserToGroupRequest)
-		if err != nil {
+		if _, err := r.client.AddUserToGroup(addUserToGroupRequest); err != nil {
 			if t, ok := err.(*errors.TencentCloudSDKError); ok {
 				if isAbleToRetry(t.GetCode()) {
 					return err
