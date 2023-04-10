@@ -27,7 +27,7 @@ type camMfaDeviceResource struct {
 }
 
 type camMfaDeviceResourceModel struct {
-	OpUin     types.Int64              `tfsdk:"user_id"`
+	OpUin types.Int64 `tfsdk:"user_id"`
 }
 
 func (r *camMfaDeviceResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -176,7 +176,6 @@ func (r *camMfaDeviceResource) Delete(ctx context.Context, req resource.DeleteRe
 		)
 		return
 	}
-
 }
 
 func (r *camMfaDeviceResource) setMfaFlag(plan *camMfaDeviceResourceModel) (err error) {
