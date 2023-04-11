@@ -15,6 +15,7 @@ Sets the MFA flag for a Tencent Cloud user.
 ```terraform
 resource "st-tencentcloud_enable_mfa_device" "mfa_device" {
   user_id = 12345678
+  phone = 1
 }
 ```
 
@@ -23,6 +24,7 @@ resource "st-tencentcloud_enable_mfa_device" "mfa_device" {
 
 ### Required
 
+- `phone` (Number) Set phone as login flag.
 - `user_id` (Number) The user ID of a Tencent Cloud user.
 
 

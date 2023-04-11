@@ -28,6 +28,7 @@ type camMfaDeviceResource struct {
 
 type camMfaDeviceResourceModel struct {
 	OpUin types.Int64 `tfsdk:"user_id"`
+	Phone types.Int64 `tfsdk:"phone"`
 }
 
 func (r *camMfaDeviceResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -40,6 +41,10 @@ func (r *camMfaDeviceResource) Schema(_ context.Context, _ resource.SchemaReques
 		Attributes: map[string]schema.Attribute{
 			"user_id": schema.Int64Attribute{
 				Description: "The user ID of a Tencent Cloud user.",
+				Required:    true,
+			},
+			"phone": schema.Int64Attribute{
+				Description: "Set phone as login flag.",
 				Required:    true,
 			},
 		},
@@ -71,7 +76,7 @@ func (r *camMfaDeviceResource) Create(ctx context.Context, req resource.CreateRe
 
 	state := &camMfaDeviceResourceModel{}
 	state.OpUin = plan.OpUin
-	// state.LoginFlag = []*camLoginActionMfaFlag{}
+	state.Phone = plan.Phone
 
 	setStateDiags := resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(setStateDiags...)
@@ -146,7 +151,7 @@ func (r *camMfaDeviceResource) Update(ctx context.Context, req resource.UpdateRe
 
 	state := &camMfaDeviceResourceModel{}
 	state.OpUin = plan.OpUin
-	// state.LoginFlag = []*camLoginActionMfaFlag{}
+	state.Phone = plan.Phone
 
 	setStateDiags := resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(setStateDiags...)
@@ -156,34 +161,14 @@ func (r *camMfaDeviceResource) Update(ctx context.Context, req resource.UpdateRe
 }
 
 func (r *camMfaDeviceResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var state *camMfaDeviceResourceModel
-	diags := req.State.Get(ctx, &state)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
 
-	unsetMfaFlagRequest := tencentCloudCamClient.NewSetMfaFlagRequest()
-	unsetMfaFlagRequest.OpUin = common.Uint64Ptr(uint64(state.OpUin.ValueInt64()))
-	unsetMfaFlagRequest.LoginFlag = &tencentCloudCamClient.LoginActionMfaFlag{
-		Phone: common.Uint64Ptr(0),
-	}
-
-	if _, err := r.client.SetMfaFlag(unsetMfaFlagRequest); err != nil {
-		resp.Diagnostics.AddError(
-			"[API ERROR] Failed to Unset MFA Login Flag",
-			err.Error(),
-		)
-		return
-	}
 }
 
 func (r *camMfaDeviceResource) setMfaFlag(plan *camMfaDeviceResourceModel) (err error) {
 	setMfaFlagRequest := tencentCloudCamClient.NewSetMfaFlagRequest()
 	setMfaFlagRequest.OpUin = common.Uint64Ptr(uint64(plan.OpUin.ValueInt64()))
-
 	setMfaFlagRequest.LoginFlag = &tencentCloudCamClient.LoginActionMfaFlag{
-		Phone: common.Uint64Ptr(1),
+		Phone: common.Uint64Ptr(uint64(plan.Phone.ValueInt64())),
 	}
 
 	setMfaFlag := func() error {
