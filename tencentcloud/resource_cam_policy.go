@@ -222,7 +222,7 @@ func (r *camPolicyResource) Read(ctx context.Context, req resource.ReadRequest, 
 		"warning",
 		fmt.Sprintf("[API WARNING] Failed to Read Attached Policies for %v: Policy Not Found!", state.UserID),
 		readAttachedPolicyNotExistErr,
-		"The policy that will be used to combine policies had been removed on AliCloud, next apply with update will prompt error:",
+		"The policy that will be used to combine policies had been removed on TencentCloud, next apply with update will prompt error:",
 	)
 	addDiagnostics(
 		&resp.Diagnostics,
@@ -281,7 +281,7 @@ func (r *camPolicyResource) Update(ctx context.Context, req resource.UpdateReque
 		"error",
 		fmt.Sprintf("[API ERROR] Failed to Read Attached Policies for %v: Policy Not Found!", state.UserID),
 		readAttachedPolicyNotExistErr,
-		"The policy that will be used to combine policies had been removed on AliCloud:",
+		"The policy that will be used to combine policies had been removed on TencentCloud:",
 	)
 	addDiagnostics(
 		&resp.Diagnostics,
@@ -430,6 +430,7 @@ func (r *camPolicyResource) createPolicy(ctx context.Context, plan *camPolicyRes
 // combinePolicyDocument combine the policy with custom logic.
 //
 // Parameters:
+//   - ctx: Context.
 //   - attachedPolicies: List of user attached policies to be combined.
 //
 // Returns:
@@ -508,6 +509,7 @@ func (r *camPolicyResource) combinePolicyDocument(ctx context.Context, attachedP
 // readCombinedPolicy will read the combined policy details.
 //
 // Parameters:
+//   - ctx: Context.
 //   - state: The state configurations, it will directly update the value of the struct since it is a pointer.
 //
 // Returns:
@@ -524,7 +526,7 @@ func (r *camPolicyResource) readCombinedPolicy(ctx context.Context, state *camPo
 		return nil, unexpectedErrs
 	}
 
-	// If the combined policies not found from AliCloud, that it might be deleted
+	// If the combined policies not found from TencentCloud, that it might be deleted
 	// from outside Terraform. Set the state to Unknown to trigger state changes
 	// and Update() function.
 	if len(notExistErrs) > 0 {
@@ -539,6 +541,7 @@ func (r *camPolicyResource) readCombinedPolicy(ctx context.Context, state *camPo
 // readAttachedPolicy will read the attached policy details.
 //
 // Parameters:
+//   - ctx: Context.
 //   - state: The state configurations, it will directly update the value of the struct since it is a pointer.
 //
 // Returns:
@@ -555,7 +558,7 @@ func (r *camPolicyResource) readAttachedPolicy(ctx context.Context, state *camPo
 		return nil, unexpectedErrs
 	}
 
-	// If the combined policies not found from AliCloud, that it might be deleted
+	// If the combined policies not found from TencentCloud, that it might be deleted
 	// from outside Terraform. Set the state to Unknown to trigger state changes
 	// and Update() function.
 	if len(notExistErrs) > 0 {
@@ -570,8 +573,8 @@ func (r *camPolicyResource) readAttachedPolicy(ctx context.Context, state *camPo
 // fetchPolicies retrieve policy document through TencentCloud SDK with backoff retry.
 //
 // Parameters:
+//   - ctx: Context.
 //   - policiesName: List of CAM policies name.
-//   - policyTypes: List of CAM policy types to retrieve.
 //
 // Returns:
 //   - policiesDetail: List of retrieved policies detail.
@@ -668,6 +671,7 @@ func (r *camPolicyResource) checkPoliciesDrift(newState, oriState *camPolicyReso
 // removePolicy will detach and delete the combined policies from user.
 //
 // Parameters:
+//   - ctx: Context.
 //   - state: The recorded state configurations.
 func (r *camPolicyResource) removePolicy(ctx context.Context, state *camPolicyResourceModel) diag.Diagnostics {
 	removePolicy := func() error {
@@ -708,9 +712,10 @@ func (r *camPolicyResource) removePolicy(ctx context.Context, state *camPolicyRe
 	return nil
 }
 
-// attachPolicyToUser attach the RAM policy to user through TencentCloud SDK.
+// attachPolicyToUser attach the CAM policy to user through TencentCloud SDK.
 //
 // Parameters:
+//   - ctx: Context
 //   - state: The recorded state configurations.
 //
 // Returns:
@@ -748,6 +753,14 @@ func handleAPIError(err error) error {
 	}
 }
 
+// getPolicyID gets the CAM policy's ID through TencentCloud SDK.
+//
+// Parameters:
+//   - ctx: Context
+//   - policyName: The name of the requested policy's ID.
+//
+// Returns:
+//   - policyID: The policy ID of the policyName.
 func (r *camPolicyResource) getPolicyID(ctx context.Context, policyName string) (policyID uint64) {
 	var listPoliciesResponse *tencentCloudCamClient.ListPoliciesResponse
 	var err error
