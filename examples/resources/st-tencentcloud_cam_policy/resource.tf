@@ -1,4 +1,4 @@
 resource "st-tencentcloud_cam_policy" "name" {
-  user_id = 123456789999
+  user_name         = "devopsuser01"
   attached_policies = ["QcloudAAFullAccess", "QcloudCamFullAccess"]
 }

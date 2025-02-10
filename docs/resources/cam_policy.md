@@ -14,7 +14,7 @@ Provides a CAM Policy resource that manages policy content exceeding character l
 
 ```terraform
 resource "st-tencentcloud_cam_policy" "name" {
-  user_id = 123456789999
+  user_name         = "devopsuser01"
   attached_policies = ["QcloudAAFullAccess", "QcloudCamFullAccess"]
 }
 ```
@@ -25,7 +25,7 @@ resource "st-tencentcloud_cam_policy" "name" {
 ### Required
 
 - `attached_policies` (List of String) The CAM policies to attach to the user.
-- `user_id` (Number) The name of the CAM user that attached to the policy.
+- `user_name` (String) The id of the CAM user that attached to the policy.
 
 ### Read-Only
 
