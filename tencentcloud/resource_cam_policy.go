@@ -587,6 +587,7 @@ func (r *camPolicyResource) fetchPolicies(ctx context.Context, policiesName []st
 
 	policyIDMap := r.getAllPolicyIDs(ctx, keyword, scope)
 
+	// Create a number of 10 channels to be ran concurrently
 	sem := make(chan struct{}, 10) // Adjust to <= 20 QPS
 	var wg sync.WaitGroup
 	var mu sync.Mutex
@@ -598,12 +599,12 @@ func (r *camPolicyResource) fetchPolicies(ctx context.Context, policiesName []st
 			continue
 		}
 
-		wg.Add(1)
-		sem <- struct{}{}
+		wg.Add(1) // add new channel to waitgroup
+		sem <- struct{}{} // blocks other channels when 10 channels is currently running
 
 		go func(policyID uint64, policyName string) {
-			defer wg.Done()
-			defer func() { <-sem }()
+			defer wg.Done() // removes channel from waitgroup
+			defer func() { <-sem }() // release channel at the end of func
 
 			getPolicyRequest := tencentCloudCamClient.NewGetPolicyRequest()
 			getPolicyRequest.PolicyId = common.Uint64Ptr(policyID)
@@ -611,11 +612,7 @@ func (r *camPolicyResource) fetchPolicies(ctx context.Context, policiesName []st
 			getPolicy := func() error {
 				getPolicyResponse, err = r.client.GetPolicyWithContext(ctx, getPolicyRequest)
 				if err != nil {
-					apiErr := handleAPIError(err)
-					if apiErr == backoff.Permanent(err) {
-						return apiErr
-					}
-					return err
+					return handleAPIError(err)
 				}
 				return nil
 			}
@@ -624,7 +621,8 @@ func (r *camPolicyResource) fetchPolicies(ctx context.Context, policiesName []st
 			reconnectBackoff.MaxElapsedTime = 30 * time.Second
 			err = backoff.Retry(getPolicy, reconnectBackoff)
 
-			mu.Lock() // Prevent race conditions when updating shared variables
+			// To prevent race coditions when appending
+			mu.Lock()
 			defer mu.Unlock()
 
 			// Handle permanent error returned from API.
@@ -646,6 +644,7 @@ func (r *camPolicyResource) fetchPolicies(ctx context.Context, policiesName []st
 
 		}(policyID, attachedPolicy)
 	}
+	// ensures all channels have finished processing before return
 	wg.Wait()
 
 	return
@@ -787,7 +786,7 @@ func handleAPIError(err error) error {
 //   - scope: The type of query to be filtered
 //
 // Returns:
-//   - policyIDMap: Map of All Policies.
+//   - policyIDMap: Map of policies of name to id.
 func (r *camPolicyResource) getAllPolicyIDs(ctx context.Context, keyword string, scope string) map[string]uint64 {
 	policyIDMap := make(map[string]uint64)
 	var err error
