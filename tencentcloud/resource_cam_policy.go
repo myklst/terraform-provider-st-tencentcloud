@@ -587,8 +587,9 @@ func (r *camPolicyResource) fetchPolicies(ctx context.Context, policiesName []st
 
 	policyIDMap := r.getAllPolicyIDs(ctx, keyword, scope)
 
-	// Create a number of 10 channels to be ran concurrently
-	sem := make(chan struct{}, 10) // Adjust to <= 20 QPS
+	// Create a number of 10 channels to be ran concurrently, the number is
+	// adjusted accordingly to TencentCloud API rate limit of 20QPS.
+	sem := make(chan struct{}, 10)
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 
@@ -599,12 +600,19 @@ func (r *camPolicyResource) fetchPolicies(ctx context.Context, policiesName []st
 			continue
 		}
 
-		wg.Add(1) // add new channel to waitgroup
-		sem <- struct{}{} // blocks other channels when 10 channels is currently running
+		// Add new queue to WaitGroup.
+		wg.Add(1)
+		// Add new channel to indicate the current number of running
+		// goroutine functions. It will block other channels when it
+		// reaches the maximum number of available channels
+		// as stated above.
+		sem <- struct{}{}
 
 		go func(policyID uint64, policyName string) {
-			defer wg.Done() // removes channel from waitgroup
-			defer func() { <-sem }() // release channel at the end of func
+			// Remove the queue from WaitGroup.
+			defer wg.Done()
+			// Release the channel.
+			defer func() { <-sem }()
 
 			getPolicyRequest := tencentCloudCamClient.NewGetPolicyRequest()
 			getPolicyRequest.PolicyId = common.Uint64Ptr(policyID)
@@ -621,7 +629,8 @@ func (r *camPolicyResource) fetchPolicies(ctx context.Context, policiesName []st
 			reconnectBackoff.MaxElapsedTime = 30 * time.Second
 			err = backoff.Retry(getPolicy, reconnectBackoff)
 
-			// To prevent race coditions when appending
+			// To prevent race conditions when appending variables
+			// in the code below.
 			mu.Lock()
 			defer mu.Unlock()
 
@@ -644,7 +653,7 @@ func (r *camPolicyResource) fetchPolicies(ctx context.Context, policiesName []st
 
 		}(policyID, attachedPolicy)
 	}
-	// ensures all channels have finished processing before return
+	// Ensures all remaining queue from WaitGroup have finished running.
 	wg.Wait()
 
 	return
@@ -786,7 +795,7 @@ func handleAPIError(err error) error {
 //   - scope: The type of query to be filtered
 //
 // Returns:
-//   - policyIDMap: Map of policies of name to id.
+//   - policyIDMap: Map of policies name to id.
 func (r *camPolicyResource) getAllPolicyIDs(ctx context.Context, keyword string, scope string) map[string]uint64 {
 	policyIDMap := make(map[string]uint64)
 	var err error
