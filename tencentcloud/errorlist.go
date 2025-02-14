@@ -11,7 +11,7 @@ const (
 	ERR_MSG_FREQ_CONTROLLER = "freq controller"
 )
 
-func isAbleToRetry(errCode string) bool {
+func isRetryableErrCode(errCode string) bool {
 	switch errCode {
 	case
 		ERR_CLB_DRY_RUN_OPERATION,
@@ -26,7 +26,7 @@ func isAbleToRetry(errCode string) bool {
 	// return false
 }
 
-func isRetryableMessage(errorMessage string) bool {
+func isRetryableErrMessage(errorMessage string) bool {
 	switch errorMessage {
 	case
 		ERR_MSG_FREQ_CONTROLLER:

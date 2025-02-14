@@ -812,9 +812,9 @@ func (r *camPolicyResource) attachPolicyToUser(ctx context.Context, state *camPo
 
 func handleAPIError(err error) error {
 	if _t, ok := err.(*errors.TencentCloudSDKError); ok {
-		if isAbleToRetry(_t.Code) {
+		if isRetryableErrCode(_t.Code) {
 			return err
-		} else if isRetryableMessage(_t.Message){
+		} else if isRetryableErrMessage(_t.Message){
 			return err
 		} else {
 			return backoff.Permanent(err)
