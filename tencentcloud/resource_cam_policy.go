@@ -242,10 +242,6 @@ func (r *camPolicyResource) Read(ctx context.Context, req resource.ReadRequest, 
 	// Set state so that Terraform will trigger update if there are changes in state.
 	setStateDiags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(setStateDiags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
 	if resp.Diagnostics.WarningsCount() > 0 || resp.Diagnostics.HasError() {
 		return
 	}
@@ -739,21 +735,21 @@ func (r *camPolicyResource) removePolicy(ctx context.Context, state *camPolicyRe
 			policyID, err := r.getPolicyID(ctx, combinedPolicy.PolicyName.ValueString())
 			if err != nil {
 				unexpectedError = append(unexpectedError, err)
-				continue
+				break
 			}
 
 			detachPolicyFromUserRequest := tencentCloudCamClient.NewDetachUserPolicyRequest()
 			detachPolicyFromUserRequest.PolicyId = common.Uint64Ptr(policyID)
 			detachPolicyFromUserRequest.DetachUin = common.Uint64Ptr(uint64(state.UserID.ValueInt64()))
 
-			deletePolicyRequest := tencentCloudCamClient.NewDeletePolicyRequest()
-			deletePolicyRequest.PolicyId = common.Uint64Ptrs([]uint64{policyID})
-
 			if _, err := r.client.DetachUserPolicyWithContext(ctx, detachPolicyFromUserRequest); err != nil {
 				// TencentCloud SDK does not return error if
 				// policy is already detached before calling
 				return handleAPIError(err)
 			}
+
+			deletePolicyRequest := tencentCloudCamClient.NewDeletePolicyRequest()
+			deletePolicyRequest.PolicyId = common.Uint64Ptrs([]uint64{policyID})
 
 			if _, err := r.client.DeletePolicyWithContext(ctx, deletePolicyRequest); err != nil {
 				// Ignore error where the policy had been deleted
@@ -791,7 +787,7 @@ func (r *camPolicyResource) attachPolicyToUser(ctx context.Context, state *camPo
 			policyID, err := r.getPolicyID(ctx, combinedPolicy.PolicyName.ValueString())
 			if err != nil {
 				unexpectedError = append(unexpectedError, err)
-				continue
+				break
 			}
 
 			attachPolicyToUserRequest := tencentCloudCamClient.NewAttachUserPolicyRequest()
