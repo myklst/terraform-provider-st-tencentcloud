@@ -131,6 +131,9 @@ func (r *camPolicyResource) Create(ctx context.Context, req resource.CreateReque
 		errors,
 		"",
 	)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	state := &camPolicyResourceModel{}
 	state.UserID = plan.UserID
@@ -138,14 +141,17 @@ func (r *camPolicyResource) Create(ctx context.Context, req resource.CreateReque
 	state.AttachedPoliciesDetail = attachedPolicies
 	state.CombinedPolicesDetail = combinedPolicies
 
-	err := r.attachPolicyToUser(ctx, state)
+	attachPolicyToUserErr := r.attachPolicyToUser(ctx, state)
 	addDiagnostics(
 		&resp.Diagnostics,
 		"error",
 		"[API ERROR] Failed to Attach Policy to User.",
-		[]error{err},
+		attachPolicyToUserErr,
 		"",
 	)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	// Create policy are not expected to have not found warning.
 	readCombinedPolicyNotExistErr, readCombinedPolicyErr := r.readCombinedPolicy(ctx, state)
@@ -250,7 +256,7 @@ func (r *camPolicyResource) Read(ctx context.Context, req resource.ReadRequest, 
 		"warning",
 		fmt.Sprintf("[API WARNING] Policy Drift Detected for %v.", state.UserID),
 		[]error{compareAttachedPoliciesErr},
-		"",
+		"This resource will be updated in the next terraform apply.",
 	)
 
 	setStateDiags = resp.State.Set(ctx, &state)
@@ -291,13 +297,25 @@ func (r *camPolicyResource) Update(ctx context.Context, req resource.UpdateReque
 		readAttachedPolicyErr,
 		"",
 	)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	removePolicyDiags := r.removePolicy(ctx, state)
-	resp.Diagnostics.Append(removePolicyDiags...)
+	removePolicyErr := r.removePolicy(ctx, state)
+	addDiagnostics(
+		&resp.Diagnostics,
+		"error",
+		fmt.Sprintf("[API ERROR] Failed to Remove Policies for %v: Unexpected Error!", state.UserID),
+		removePolicyErr,
+		"",
+	)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	state.CombinedPolicesDetail = nil
+	setStateDiags := resp.State.Set(ctx, &state)
+	resp.Diagnostics.Append(setStateDiags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -310,20 +328,26 @@ func (r *camPolicyResource) Update(ctx context.Context, req resource.UpdateReque
 		errors,
 		"",
 	)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	state.UserID = plan.UserID
 	state.AttachedPolicies = plan.AttachedPolicies
 	state.AttachedPoliciesDetail = attachedPolicies
 	state.CombinedPolicesDetail = combinedPolicies
 
-	err := r.attachPolicyToUser(ctx, state)
+	attachPolicyToUserErr := r.attachPolicyToUser(ctx, state)
 	addDiagnostics(
 		&resp.Diagnostics,
 		"error",
 		"[API ERROR] Failed to Attach Policy to User.",
-		[]error{err},
+		attachPolicyToUserErr,
 		"",
 	)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	// Create policy are not expected to have not found warning.
 	readCombinedPolicyNotExistErr, readCombinedPolicyErr := r.readCombinedPolicy(ctx, state)
@@ -341,12 +365,11 @@ func (r *camPolicyResource) Update(ctx context.Context, req resource.UpdateReque
 		readCombinedPolicyErr,
 		"",
 	)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	setStateDiags := resp.State.Set(ctx, &state)
+	setStateDiags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(setStateDiags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -361,8 +384,14 @@ func (r *camPolicyResource) Delete(ctx context.Context, req resource.DeleteReque
 		return
 	}
 
-	removePolicyDiags := r.removePolicy(ctx, state)
-	resp.Diagnostics.Append(removePolicyDiags...)
+	removePolicyUnexpectedErr := r.removePolicy(ctx, state)
+	addDiagnostics(
+		&resp.Diagnostics,
+		"error",
+		fmt.Sprintf("[API ERROR] Failed to Remove Policies for %v: Unexpected Error!", state.UserID),
+		removePolicyUnexpectedErr,
+		"",
+	)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -463,6 +492,7 @@ func (r *camPolicyResource) combinePolicyDocument(ctx context.Context, attachedP
 				PolicyName:     attachedPolicy.PolicyName,
 				PolicyDocument: types.StringValue(tempPolicyDocument),
 			})
+			continue
 		}
 
 		var data map[string]interface{}
@@ -471,8 +501,7 @@ func (r *camPolicyResource) combinePolicyDocument(ctx context.Context, attachedP
 			return nil, nil, nil, errList
 		}
 
-		statementArr := data["statement"].([]interface{})
-		statementBytes, err := json.Marshal(statementArr)
+		statementBytes, err := json.Marshal(data["statement"])
 		if err != nil {
 			errList = append(errList, err)
 			return nil, nil, nil, errList
@@ -582,10 +611,13 @@ func (r *camPolicyResource) readAttachedPolicy(ctx context.Context, state *camPo
 //   - notExistError: List of allowed not exist errors to be used as warning messages instead, return empty list if no errors.
 //   - unexpectedError: List of unexpected errors to be used as normal error messages, return empty list if no errors.
 func (r *camPolicyResource) fetchPolicies(ctx context.Context, policiesName []string, keyword string, scope string) (policiesDetail []*policyDetail, notExistError, unexpectedError []error) {
-	var err error
 	getPolicyResponse := &tencentCloudCamClient.GetPolicyResponse{}
 
-	policyIDMap := r.getAllPolicyIDs(ctx, keyword, scope)
+	policyIDMap, err := r.getAllPolicyIDs(ctx, keyword, scope)
+	if err != nil {
+		unexpectedError = append(unexpectedError, err)
+		return
+	}
 
 	// Create a number of 10 channels to be ran concurrently, the number is
 	// adjusted accordingly to TencentCloud API rate limit of 20QPS.
@@ -701,12 +733,13 @@ func (r *camPolicyResource) checkPoliciesDrift(newState, oriState *camPolicyReso
 // Parameters:
 //   - ctx: Context.
 //   - state: The recorded state configurations.
-func (r *camPolicyResource) removePolicy(ctx context.Context, state *camPolicyResourceModel) diag.Diagnostics {
+func (r *camPolicyResource) removePolicy(ctx context.Context, state *camPolicyResourceModel) (unexpectedError []error) {
 	removePolicy := func() error {
 		for _, combinedPolicy := range state.CombinedPolicesDetail {
 			policyID, err := r.getPolicyID(ctx, combinedPolicy.PolicyName.ValueString())
 			if err != nil {
-				return fmt.Errorf("[API ERROR] Failed to Get Policy when Removing Policy: %s", err.Error())
+				unexpectedError = append(unexpectedError, err)
+				continue
 			}
 
 			detachPolicyFromUserRequest := tencentCloudCamClient.NewDetachUserPolicyRequest()
@@ -717,11 +750,17 @@ func (r *camPolicyResource) removePolicy(ctx context.Context, state *camPolicyRe
 			deletePolicyRequest.PolicyId = common.Uint64Ptrs([]uint64{policyID})
 
 			if _, err := r.client.DetachUserPolicyWithContext(ctx, detachPolicyFromUserRequest); err != nil {
+				// TencentCloud SDK does not return error if
+				// policy is already detached before calling
 				return handleAPIError(err)
 			}
 
 			if _, err := r.client.DeletePolicyWithContext(ctx, deletePolicyRequest); err != nil {
-				return handleAPIError(err)
+				// Ignore error where the policy had been deleted
+				// as it is intended to delete the IAM policy.
+				if err.(*errors.TencentCloudSDKError).Code != "InvalidParameter.PolicyIDNotExist" {
+					return handleAPIError(err)
+				}
 			}
 		}
 
@@ -732,12 +771,7 @@ func (r *camPolicyResource) removePolicy(ctx context.Context, state *camPolicyRe
 	reconnectBackoff.MaxElapsedTime = 30 * time.Second
 	err := backoff.Retry(removePolicy, reconnectBackoff)
 	if err != nil {
-		return diag.Diagnostics{
-			diag.NewErrorDiagnostic(
-				"[API ERROR] Failed to Delete Policy",
-				err.Error(),
-			),
-		}
+		return append(unexpectedError, err)
 	}
 
 	return nil
@@ -751,12 +785,13 @@ func (r *camPolicyResource) removePolicy(ctx context.Context, state *camPolicyRe
 //
 // Returns:
 //   - err: Error.
-func (r *camPolicyResource) attachPolicyToUser(ctx context.Context, state *camPolicyResourceModel) (err error) {
+func (r *camPolicyResource) attachPolicyToUser(ctx context.Context, state *camPolicyResourceModel) (unexpectedError []error) {
 	attachPolicyToUser := func() error {
 		for _, combinedPolicy := range state.CombinedPolicesDetail {
 			policyID, err := r.getPolicyID(ctx, combinedPolicy.PolicyName.ValueString())
 			if err != nil {
-				return err
+				unexpectedError = append(unexpectedError, err)
+				continue
 			}
 
 			attachPolicyToUserRequest := tencentCloudCamClient.NewAttachUserPolicyRequest()
@@ -772,12 +807,18 @@ func (r *camPolicyResource) attachPolicyToUser(ctx context.Context, state *camPo
 
 	reconnectBackoff := backoff.NewExponentialBackOff()
 	reconnectBackoff.MaxElapsedTime = 30 * time.Second
-	return backoff.Retry(attachPolicyToUser, reconnectBackoff)
+	if err := backoff.Retry(attachPolicyToUser, reconnectBackoff); err != nil {
+		unexpectedError = append(unexpectedError, err)
+	}
+
+	return unexpectedError
 }
 
 func handleAPIError(err error) error {
 	if _t, ok := err.(*errors.TencentCloudSDKError); ok {
 		if isAbleToRetry(_t.Code) {
+			return err
+		} else if isRetryableMessage(_t.Message){
 			return err
 		} else {
 			return backoff.Permanent(err)
@@ -796,7 +837,7 @@ func handleAPIError(err error) error {
 //
 // Returns:
 //   - policyIDMap: Map of policies name to id.
-func (r *camPolicyResource) getAllPolicyIDs(ctx context.Context, keyword string, scope string) map[string]uint64 {
+func (r *camPolicyResource) getAllPolicyIDs(ctx context.Context, keyword string, scope string) (map[string]uint64, error) {
 	policyIDMap := make(map[string]uint64)
 	var err error
 
@@ -827,7 +868,10 @@ func (r *camPolicyResource) getAllPolicyIDs(ctx context.Context, keyword string,
 
 		reconnectBackoff := backoff.NewExponentialBackOff()
 		reconnectBackoff.MaxElapsedTime = 30 * time.Second
-		backoff.Retry(listPolicies, reconnectBackoff)
+		err = backoff.Retry(listPolicies, reconnectBackoff)
+		if err != nil {
+			return nil, err
+		}
 
 		if listPoliciesResponse == nil || listPoliciesResponse.Response == nil || len(listPoliciesResponse.Response.List) == 0 {
 			break
@@ -845,7 +889,7 @@ func (r *camPolicyResource) getAllPolicyIDs(ctx context.Context, keyword string,
 		page++
 	}
 
-	return policyIDMap
+	return policyIDMap, nil
 }
 
 // getPolicyID gets the CAM policy's ID through TencentCloud SDK.
